@@ -2,7 +2,7 @@
 
 For CVAutoDL.ps1
 
-PowerShell that automates creation of Commvault Disk Libraries
+PowerShell that automates creation of Commvault Disk Library mount paths and associated Commvault Disk Library. It's primary purpose is to reduce the tedious work required when presented with a large number of disks to format and mount for a Commvault Disk Library. It's for Windows NTFS based Disk Libraries
 
 Initializes / Onlines / Formats and creates mount point directories in Commvault. 
 
