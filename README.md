@@ -21,10 +21,11 @@ If there are multiple MediaAgents that need to have share access to the library 
         ex.  CVAutoDL.ps1 -disks 5,6,7,8,9 -lib MyDiskLibrary -ma cs11 -dir c:\commvault\myDirContainingMounts -ma2s MediaAgent2,MediaAgent3 -user UserA -psswd MyPassword
 
  If just want to get disk ready and not run any Commvault commands. 
+ 
         ex. CVAutoDL.ps1 -disks 4, 5 -dir c:\MyDL\MyDirContainingMounts -d
 
 Enter y or Y at prompt to run script. Anything else exits.
 
-Get-Help .\CVAutoDL.ps1 for help
+        Get-Help .\CVAutoDL.ps1 for help
 
 There is also a workflow with the same functionality but can be run remotely.
