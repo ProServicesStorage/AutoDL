@@ -26,6 +26,8 @@ If there are multiple MediaAgents that need to have share access to the library 
 
 Enter y or Y at prompt to run script. Anything else exits.
 
-        Get-Help .\CVAutoDL.ps1 for help
+To get help use Get-Help
+
+        Get-Help .\CVAutoDL.ps1
 
 There is also a workflow with the same functionality but can be run remotely.
