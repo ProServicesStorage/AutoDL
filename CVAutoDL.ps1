@@ -1,21 +1,24 @@
-# Commvault Professional Services 2018
-	# !!!CAUTION!!! - Data destructive so understand what you are doing first!
-    # Ex: c:\scripts\cvautodl.ps1 -disks 4, 6, 8, 9, 10 -dir c:\commvault\disklibrary\ -init
-    # If omit -init then non-destructive and will only create directory moun folders
- 
+#--Initializes / Onlines / Formats and creates mount point directories for Commvault. 
+#--Also creates Disk Library with Automated Mount Path Detection or adds Automated Mount Path Detection to existing Disk Library.
+# To create a new disk library with automated mount path detetction run as follows. ex. CVAutoDL.ps1 -disks 5,6,7,8,9 -lib MyDiskLibrary -ma cs11 -dir c:\commvault\myDirContainingMounts
+# To add a new automated mount path folder to an existing library add the -add switch
+#		ex. CVAutoDL.ps1 -disks 5,6,7,8,9 -lib MyDiskLibrary -ma cs11 -dir c:\commvault\myDirContainingMounts -add
+# If there are multiple MediaAgents that need to have share access to the library then add the following additional parameters: -ma2s MediaAgent1,MediaAgent2 -user UserA -psswd MyPassword
+#		ex.  CVAutoDL.ps1 -disks 5,6,7,8,9 -lib MyDiskLibrary -ma cs11 -dir c:\commvault\myDirContainingMounts -ma2s MediaAgent2,MediaAgent3 -user UserA -psswd MyPassword
 
+#Begin Code
 
-#Create Windows OS Mounts for Disk Library.
-    
-
+#Accept user defined input
 
 param ([String[]] $disks, [String] $dir, [String] $lib, [String] $ma,[String[]] $ma2s,[String] $user,[String] $psswd,[switch] $add)
 
+#Directory where mount points will be created
 $MountDirectory = $dir
 
 $drvtmp1 = ls function:[d-z]: -n | ?{ !(test-path $_) } | select -Last 1
 $drvtmp2 = $drvtmp1 -replace ".$"
 
+#For use with sharing mount paths
 $myArrayofPrimaryPaths = @()
 
 
@@ -26,10 +29,7 @@ if(!(Test-Path -Path $MountDirectory ))
     New-Item -ItemType directory -Path $MountDirectory
 
 }
-
-
-
-
+#Initialize Disk. Create a new partition
 foreach($disk in $disks)
 {
     Set-Disk -Number $disk -IsOffline $false
@@ -51,16 +51,14 @@ foreach($disk in $disks)
     Start-sleep 1
 }
 
-
-
-
+#Create folders and mount disks
 foreach ($disk in $disks)
 
 {
 	$MountName = '\Mount'+$disk
 	$path = $MountDirectory+$MountName
     	$myArrayofPrimaryPaths += $path
-	#$path
+	
 
     if(!(Test-Path -Path $path )) 
     
@@ -69,58 +67,61 @@ foreach ($disk in $disks)
 
     }
 
-	#start-sleep 1
+	
 	Add-PartitionAccessPath -DiskNumber $disk -PartitionNumber 2 -AccessPath $path 
-
 
 }
 
 
-# Create Disk Library with Automated Mount Path Detection and share out to other MediaAgents
-
+#Create Disk Library with Automated Mount Path Detection and share out to other MediaAgents
 #Create Disk Lib with AutoMount or add another AutoMount Folder to existing Disk Lib
 
 if ($add)
 {
-$temptxt = "woo hoo"
-$temptxt
 
-qoperation execute -af add_mount_point.xml -library/libraryName "$lib" -mediaAgentName "$ma" -mountPath "$dir"
+$tmp2 = [System.IO.Path]::GetTempFileName()
+
+$TmpXML ='<EVGui_ConfigureStorageLibraryReq isConfigRequired="1"> 
+<library baseFolder="CVDiskFolder" libraryName="'+$lib+'" mediaAgentName="'+$ma+'" mountPath="'+$dir+'" opType="4"/> 
+</EVGui_ConfigureStorageLibraryReq>'
+$TmpXML | Set-Content $tmp2
+
+qoperation execute -af $tmp2
+#qoperation execute -af add_mount_point.xml -library/libraryName "$lib" -mediaAgentName "$ma" -mountPath "$dir"
 start-sleep 5
 restart-service 'GXMMM(Instance001)'
-sleep 300
+#sleep 300
 
-#Share Mount Paths with other MediaAgents
+#Check if there is a MediaAgent or multiple MediaAgents specified to share with.
 
-    # Input Code here
-    # Maybe Sleep 20 minutes (15 default scan + 5 to complete process)
+if($ma2s)
 
-#qoperation execute -af share_mount_path_example.xml
+{            
+    Write-Host "There is a secondary MA!"
+	sleep 300
 
 foreach ($ma2 in $ma2s)
+
 {
-#$ma2
+
 foreach ($path2 in $myArrayofPrimaryPaths)
 {
 
-#$path2
+
 $path3 = $path2 -replace "\:\\","$\"
 $path4 = "\\"+$ma+"\"+$path3
 $ma2
 $path4
 
 $tmp2 = [System.IO.Path]::GetTempFileName()
-#$tmp3 = $tmp2+".xml"
+
 $TmpXML = '<EVGui_ConfigureStorageLibraryReq>
 <library libraryName="'+$lib+'" mediaAgentName="'+$ma+'" mountPath="'+$path2+'" opType="64"/>
 <libNewProp deviceAccessType="4" mountPath="'+$path4+'" mediaAgentName="'+$ma2+'" loginName="'+$user+'" password="'+$psswd+'" proxyPassword=""/>
 </EVGui_ConfigureStorageLibraryReq>'
-#$Mount1
+
 $TmpXML | Set-Content $tmp2
 
-#cat $tmp2
-#Remove-Item $tmp2
-#Clear-Variable $tmp2
 
 qoperation execute -af $tmp2
 Remove-Item $tmp2
@@ -128,49 +129,57 @@ Remove-Item $tmp2
 }
 
 }
+} 
+
+else 
+{            
+    Write-Host "There is no secondary MA to share with!"        
 
 }
+}
+
 else
 {
+$tmp2 = [System.IO.Path]::GetTempFileName()
+$TmpXML = '<EVGui_ConfigureStorageLibraryReq isConfigRequired="1">
+    <library baseFolder="CVDiskFolder" libraryName="'+$lib+'" mediaAgentId="" mediaAgentName="'+$ma+'" mountPath="'+$dir+'" opType="1"/>
+</EVGui_ConfigureStorageLibraryReq>'
+$TmpXML | Set-Content $tmp2
 
+qoperation execute -af $tmp2
 
-
-qoperation execute -af create_mount_point.xml -library/libraryName "$lib" -mediaAgentName "$ma" -mountPath "$dir"
+#qoperation execute -af create_mount_point.xml -library/libraryName "$lib" -mediaAgentName "$ma" -mountPath "$dir"
 start-sleep 5
 restart-service 'GXMMM(Instance001)'
-sleep 300
 
-#Share Mount Paths with other MediaAgents
 
-    # Input Code here
-    # Maybe Sleep 20 minutes (15 default scan + 5 to complete process)
+if($ma2) 
 
-#qoperation execute -af share_mount_path_example.xml
+{            
+    Write-Host "There is a secondary MA!"
+	sleep 300
 
 foreach ($ma2 in $ma2s)
 {
-#$ma2
+
 foreach ($path2 in $myArrayofPrimaryPaths)
 {
 
-#$path2
+
 $path3 = $path2 -replace "\:\\","$\"
 $path4 = "\\"+$ma+"\"+$path3
 $ma2
 $path4
 
 $tmp2 = [System.IO.Path]::GetTempFileName()
-#$tmp3 = $tmp2+".xml"
+
 $TmpXML = '<EVGui_ConfigureStorageLibraryReq>
 <library libraryName="'+$lib+'" mediaAgentName="'+$ma+'" mountPath="'+$path2+'" opType="64"/>
 <libNewProp deviceAccessType="4" mountPath="'+$path4+'" mediaAgentName="'+$ma2+'" loginName="'+$user+'" password="'+$psswd+'" proxyPassword=""/>
 </EVGui_ConfigureStorageLibraryReq>'
-#$Mount1
+
 $TmpXML | Set-Content $tmp2
 
-#cat $tmp2
-#Remove-Item $tmp2
-#Clear-Variable $tmp2
 
 qoperation execute -af $tmp2
 Remove-Item $tmp2
@@ -178,7 +187,19 @@ Remove-Item $tmp2
 }
 
 }
+} 
+
+else 
+
+{            
+    Write-Host "There is no secondary MA to share with!"            
+}
 
 }
 
-
+#End Code
+#--Last Edited by Mark Richardson on 5/20/2019
+	#Removes Requirement for any xml files as will be temporarily generated by the script
+	#Cleaned up comments
+	#Improved documenation
+	#Created repository in github
