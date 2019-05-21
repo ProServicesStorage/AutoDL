@@ -1,4 +1,7 @@
 # AutoDL
+
+For CVAutoDL.ps1
+
 PowerShell that automates creation of Commvault Disk Libraries
 
 Initializes / Onlines / Formats and creates mount point directories in Commvault. 
@@ -17,3 +20,4 @@ If there are multiple MediaAgents that need to have share access to the library 
     
         ex.  CVAutoDL.ps1 -disks 5,6,7,8,9 -lib MyDiskLibrary -ma cs11 -dir c:\commvault\myDirContainingMounts -ma2s MediaAgent2,MediaAgent3 -user UserA -psswd MyPassword
 
+There is also a workflow with the same functionality but can be run remotely.
